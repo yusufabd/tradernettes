@@ -1,26 +1,38 @@
 package net.idey.tradernettest
 
 import android.annotation.SuppressLint
+import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import kotlinx.android.synthetic.main.item_qoute.view.*
+import java.util.*
 
 @SuppressLint("SetTextI18n")
 class QuoteHolder(view: View) : RecyclerView.ViewHolder(view) {
 
     fun bind(quote: Quote) {
         itemView.ticker.text = quote.c
-        quote.pcp?.let { itemView.changePercent.text = "${it}%" }
-        quote.ltr?.let { itemView.stock.text = it }
-        quote.name?.let { itemView.name.text = it }
-        quote.chg?.let { itemView.change.text = "($it)" }
-        quote.ltp?.let { itemView.price.text = it.toString() }
+
+        quote.pcp?.let {
+            val textColor = if (it >= 0) R.color.green else R.color.red
+            itemView.changePercent.setTextColor(itemView.context.getColor(textColor))
+            itemView.changePercent.text = "${it}%"
+        }
+
+        setDisplayData(quote)
+
+        loadLogo(quote.c)
     }
 
     fun update(quote: Quote) {
-        //todo update ui
         quote.pcp?.let {
             itemView.changePercent.text = "${it}%"
             val indicatorBackground =
@@ -28,6 +40,41 @@ class QuoteHolder(view: View) : RecyclerView.ViewHolder(view) {
             val textColor = if (it >= 0) R.color.green else R.color.red
             showIndicatorAnimation(indicatorBackground, textColor)
         }
+        setDisplayData(quote)
+    }
+
+    private fun loadLogo(ticker: String) {
+        Glide
+            .with(itemView.context)
+            .load(IMAGE_BASE_URL + ticker.toLowerCase(Locale.getDefault()))
+            .addListener(object : RequestListener<Drawable> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    e?.printStackTrace()
+                    return true
+                }
+
+                override fun onResourceReady(
+                    resource: Drawable?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    if (resource != null) {
+                        itemView.logo.isVisible = true
+                        itemView.logo.setImageDrawable(resource)
+                    }
+                    return true
+                }
+            }).into(itemView.logo)
+    }
+
+    private fun setDisplayData(quote: Quote) {
         quote.ltr?.let { itemView.stock.text = it }
         quote.name?.let { itemView.name.text = it }
         quote.chg?.let { itemView.change.text = "($it)" }
@@ -43,6 +90,10 @@ class QuoteHolder(view: View) : RecyclerView.ViewHolder(view) {
             itemView.indicator.animate().setDuration(200).alpha(0f)
             itemView.changePercent.setTextColor(itemView.context.getColor(textColor))
         }, 2000)
+    }
+
+    companion object {
+        private const val IMAGE_BASE_URL = "https://tradernet.ru/logos/get-logo-by-ticker?ticker="
     }
 
 }
