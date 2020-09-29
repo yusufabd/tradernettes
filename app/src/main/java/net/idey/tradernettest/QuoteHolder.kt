@@ -14,32 +14,37 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import kotlinx.android.synthetic.main.item_qoute.view.*
 import java.util.*
+import kotlin.math.absoluteValue
 
 @SuppressLint("SetTextI18n")
 class QuoteHolder(view: View) : RecyclerView.ViewHolder(view) {
 
-    fun bind(quote: Quote) {
+    private lateinit var quote: Quote
+
+    fun bind(q: Quote) {
+        quote = q
+
         itemView.ticker.text = quote.c
 
         quote.pcp?.let {
-            val textColor = if (it >= 0) R.color.green else R.color.red
-            itemView.changePercent.setTextColor(itemView.context.getColor(textColor))
-            itemView.changePercent.text = "${it}%"
+            itemView.changePercent.setTextColor(itemView.context.getColor(provideChangeColor(it)))
+            itemView.changePercent.text = provideChangeSymbol(it) + it.absoluteValue.getRounded() + "%"
         }
 
         setDisplayData(quote)
 
-        loadLogo(quote.c)
+        //loadLogo(quote.c)
     }
 
-    fun update(quote: Quote) {
-        quote.pcp?.let {
-            itemView.changePercent.text = "${it}%"
+    fun update(q: Quote) {
+        q.pcp?.let { newPcp ->
+            itemView.changePercent.text = provideChangeSymbol(newPcp) + newPcp.absoluteValue.getRounded() + "%"
+
             val indicatorBackground =
-                if (it > 0) R.drawable.indicator_green_bg else R.drawable.indicator_red_bg
-            val textColor = if (it >= 0) R.color.green else R.color.red
-            showIndicatorAnimation(indicatorBackground, textColor)
+                if (newPcp > 0.0) R.drawable.indicator_green_bg else R.drawable.indicator_red_bg
+            showIndicatorAnimation(indicatorBackground, provideChangeColor(newPcp))
         }
+        quote = q
         setDisplayData(quote)
     }
 
@@ -66,8 +71,8 @@ class QuoteHolder(view: View) : RecyclerView.ViewHolder(view) {
                     isFirstResource: Boolean
                 ): Boolean {
                     if (resource != null) {
-                        itemView.logo.isVisible = true
-                        itemView.logo.setImageDrawable(resource)
+                        itemView.ticker.setCompoundDrawables(resource, null, null, null)
+                        //itemView.logo.setImageDrawable(resource)
                     }
                     return true
                 }
@@ -77,8 +82,8 @@ class QuoteHolder(view: View) : RecyclerView.ViewHolder(view) {
     private fun setDisplayData(quote: Quote) {
         quote.ltr?.let { itemView.stock.text = it }
         quote.name?.let { itemView.name.text = it }
-        quote.chg?.let { itemView.change.text = "($it)" }
-        quote.ltp?.let { itemView.price.text = it.toString() }
+        quote.chg?.let { itemView.change.text = "(${it.getRounded()})" }
+        quote.ltp?.let { itemView.price.text = it.getRounded() }
     }
 
     private fun showIndicatorAnimation(indicatorBackground: Int, textColor: Int) {
@@ -92,8 +97,28 @@ class QuoteHolder(view: View) : RecyclerView.ViewHolder(view) {
         }, 2000)
     }
 
+    private fun provideChangeColor(it: Double): Int {
+        return when {
+            it > 0 -> R.color.green
+            it < 0 -> R.color.red
+            else -> R.color.black
+        }
+    }
+
+    private fun provideChangeSymbol(it: Double): String {
+        return when {
+            it > 0 -> "+"
+            it < 0 -> "-"
+            else -> ""
+        }
+    }
+
     companion object {
         private const val IMAGE_BASE_URL = "https://tradernet.ru/logos/get-logo-by-ticker?ticker="
     }
 
+}
+
+fun Double.getRounded(): String {
+    return String.format("%.2f", this);
 }
